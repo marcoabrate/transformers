@@ -47,6 +47,7 @@ from utils import (
     write_txt_file,
 )
 
+from hp_config import hp_objective, hp_space
 
 logger = logging.getLogger(__name__)
 
@@ -128,6 +129,11 @@ class DataTrainingArguments:
         metadata={"help": "If only pad tokens should be ignored. This assumes that `config.pad_token_id` is defined."},
     )
 
+@dataclass
+class HPSearchArgs:
+
+    hp_search: bool = field(default=False, metadata={'help': 'Wether to run hyperparameter search'})
+
 
 def handle_metrics(split, metrics, output_dir):
     """
@@ -150,14 +156,14 @@ def main():
     # or by passing the --help flag to this script.
     # We now keep distinct sets of args, for a cleaner separation of concerns.
 
-    parser = HfArgumentParser((ModelArguments, DataTrainingArguments, Seq2SeqTrainingArguments))
+    parser = HfArgumentParser((ModelArguments, DataTrainingArguments, Seq2SeqTrainingArguments, HPSearchArgs))
 
     if len(sys.argv) == 2 and sys.argv[1].endswith(".json"):
         # If we pass only one argument to the script and it's the path to a json file,
         # let's parse it to get our arguments.
-        model_args, data_args, training_args = parser.parse_json_file(json_file=os.path.abspath(sys.argv[1]))
+        model_args, data_args, training_args, hp_search_args = parser.parse_json_file(json_file=os.path.abspath(sys.argv[1]))
     else:
-        model_args, data_args, training_args = parser.parse_args_into_dataclasses()
+        model_args, data_args, training_args, hp_search_args = parser.parse_args_into_dataclasses()
 
     check_output_dir(training_args)
 
@@ -239,7 +245,7 @@ def main():
     dataset_class = Seq2SeqDataset
 
     # Get datasets
-    train_dataset = (
+    train_dataset = \
         dataset_class(
             tokenizer,
             type_path="train",
@@ -249,10 +255,8 @@ def main():
             max_source_length=data_args.max_source_length,
             prefix=model.config.prefix or "",
         )
-        if training_args.do_train
-        else None
-    )
-    eval_dataset = (
+
+    eval_dataset = \
         dataset_class(
             tokenizer,
             type_path="val",
@@ -262,9 +266,7 @@ def main():
             max_source_length=data_args.max_source_length,
             prefix=model.config.prefix or "",
         )
-        if training_args.do_eval or training_args.evaluation_strategy != EvaluationStrategy.NO
-        else None
-    )
+
     test_dataset = (
         dataset_class(
             tokenizer,
@@ -283,6 +285,69 @@ def main():
     compute_metrics_fn = (
         build_compute_metrics_fn(data_args.task, tokenizer) if training_args.predict_with_generate else None
     )
+
+    # Hyperparameter Search
+    if hp_search_args.hp_search:
+
+        def model_init():
+            model = AutoModelForSeq2SeqLM.from_pretrained(
+                model_args.model_name_or_path,
+                from_tf=".ckpt" in model_args.model_name_or_path,
+                config=config,
+                cache_dir=model_args.cache_dir,
+            )
+            # use task specific params
+            use_task_specific_params(model, data_args.task)
+            # set num_beams for evaluation
+            if data_args.eval_beams is None:
+                data_args.eval_beams = model.config.num_beams
+            # set decoder_start_token_id for MBart
+            if model.config.decoder_start_token_id is None and\
+            isinstance(tokenizer, (MBartTokenizer, MBartTokenizerFast)):
+                assert (
+                    data_args.tgt_lang is not None and data_args.src_lang is not None
+                ), "mBart requires --tgt_lang and --src_lang"
+                if isinstance(tokenizer, MBartTokenizer):
+                    model.config.decoder_start_token_id =\
+                    tokenizer.lang_code_to_id[data_args.tgt_lang]
+                else:
+                    model.config.decoder_start_token_id =\
+                    tokenizer.convert_tokens_to_ids(data_args.tgt_lang)
+
+            if model_args.freeze_embeds:
+                freeze_embeds(model)
+            if model_args.freeze_encoder:
+                freeze_params(model.get_encoder())
+                assert_all_frozen(model.get_encoder())
+
+            return model
+
+        trainer = Seq2SeqTrainer(
+            model_init=model_init,
+            args=training_args,
+            data_args=data_args,
+            train_dataset=train_dataset,
+            eval_dataset=eval_dataset,
+            data_collator=Seq2SeqDataCollator(
+                tokenizer, data_args, model.config.decoder_start_token_id,
+                training_args.tpu_num_cores
+            ),
+            compute_metrics=compute_metrics_fn,
+            tokenizer=tokenizer,
+        )
+
+        logger.info('** Hyperparameter Search **')
+
+        trainer.hyperparameter_search(
+            direction = 'maximize',
+            compute_objective = hp_objective,
+            hp_space = hp_space,
+            backend = 'ray',
+            resources_per_trial = {'gpu': 1},
+        )
+        return
+
+
     trainer = Seq2SeqTrainer(
         model=model,
         args=training_args,
@@ -290,7 +355,8 @@ def main():
         train_dataset=train_dataset,
         eval_dataset=eval_dataset,
         data_collator=Seq2SeqDataCollator(
-            tokenizer, data_args, model.config.decoder_start_token_id, training_args.tpu_num_cores
+            tokenizer, data_args, model.config.decoder_start_token_id,
+            training_args.tpu_num_cores
         ),
         compute_metrics=compute_metrics_fn,
         tokenizer=tokenizer,
