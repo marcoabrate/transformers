@@ -133,7 +133,13 @@ class DataTrainingArguments:
 class HPSearchArgs:
 
     hp_search: bool = field(default=False, metadata={'help': 'Wether to run hyperparameter search'})
-
+    hp_search_checkpoint_dir: Optional[str] = field(default=None, metadata={'help': 'Where to save Ray checkpoints for hyperparameter search.'})
+    hp_search_local_mode: bool = field(default=False, metadata={'help': 'If true, the code will be executed serially. This is useful for debugging hyperparameter search.'})
+    hp_search_db_host: Optional[str] = field(default=None, metadata={'help': 'The host to bind the dashboard server to for hyperparameter search.'})
+    hp_search_log_to_driver: bool = field(default=False, metadata={'help': 'If true, the output from all of the worker processes on all nodes will be directed to the driver during hyperparameter search.'})
+    hp_search_checkpoints_num: int = field(default=0, metadata={'help': 'Number of checkpoints to keep during hyperparameter search.'})
+    hp_search_name: Optional[str] = field(default=None, metadata={'help': 'Name of hyperparameter search experiment.'})
+    hp_search_log_dir: Optional[str] = field(default='~/ray_results', metadata={'help': 'Local dir to save hyperparameter search results to. Defaults to ~/ray_results.'})
 
 def handle_metrics(split, metrics, output_dir):
     """
@@ -343,6 +349,15 @@ def main():
             compute_objective = hp_objective,
             hp_space = hp_space,
             backend = 'ray',
+            cp_dir = hp_search_args.hp_search_checkpoint_dir,
+            local_mode = hp_search_args.hp_search_local_mode,
+            db_host = hp_search_args.hp_search_db_host,
+            log_to_driver = hp_search_args.hp_search_log_to_driver,
+            keep_checkpoints_num = hp_search_args.hp_search_checkpoints_num,
+            name = hp_search_args.hp_search_name,
+            local_dir = hp_search_args.hp_search_log_dir,
+            # search_alg
+            # scheduler
             resources_per_trial = {'gpu': 1},
         )
         return

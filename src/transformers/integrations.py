@@ -147,8 +147,25 @@ def run_hp_search_optuna(trainer, n_trials: int, direction: str, **kwargs) -> Be
     return BestRun(str(best_trial.number), best_trial.value, best_trial.params)
 
 
-def run_hp_search_ray(trainer, n_trials: int, direction: str, **kwargs) -> BestRun:
+def run_hp_search_ray(
+    trainer,
+    n_trials: int,
+    direction: str,
+    cp_dir: str,
+    local_mode: bool,
+    db_host: str,
+    log_to_driver: bool,
+    **kwargs) -> BestRun:
+    
     import ray
+
+    ray.init(
+        local_mode=local_mode,
+        ignore_reinit_error=True,
+        dashboard_host=db_host,
+        dashboard_port=8265,
+        log_to_driver=log_to_driver,
+    )
 
     def _objective(trial, local_trainer, checkpoint_dir=None):
         checkpoint = None
@@ -219,7 +236,7 @@ def run_hp_search_ray(trainer, n_trials: int, direction: str, **kwargs) -> BestR
             )
 
     analysis = ray.tune.run(
-        ray.tune.with_parameters(_objective, local_trainer=trainer),
+        ray.tune.with_parameters(_objective, local_trainer=trainer, checkpoint_dir=cp_dir),
         config=trainer.hp_space(None),
         num_samples=n_trials,
         **kwargs,
