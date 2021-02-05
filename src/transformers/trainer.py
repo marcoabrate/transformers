@@ -1168,6 +1168,10 @@ class Trainer:
         compute_objective: Optional[Callable[[Dict[str, float]], float]] = None,
         n_trials: int = 20,
         direction: str = "minimize",
+        cp_dir: str = "~/ray_checkpoints",
+        local_mode: bool = False,
+        db_host: str = "127.0.0.1",
+        log_to_driver: bool = False,
         backend: Optional[Union["str", HPSearchBackend]] = None,
         hp_name: Optional[Callable[["optuna.Trial"], str]] = None,
         **kwargs,
@@ -1239,7 +1243,15 @@ class Trainer:
         self.compute_objective = default_compute_objective if compute_objective is None else compute_objective
 
         run_hp_search = run_hp_search_optuna if backend == HPSearchBackend.OPTUNA else run_hp_search_ray
-        best_run = run_hp_search(self, n_trials, direction, **kwargs)
+        best_run = run_hp_search(
+            self,
+            n_trials,
+            direction,
+            cp_dir,
+            local_mode,
+            db_host,
+            log_to_driver,
+            **kwargs)
 
         self.hp_search_backend = None
         return best_run

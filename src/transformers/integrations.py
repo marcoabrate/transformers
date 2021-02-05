@@ -170,6 +170,8 @@ def run_hp_search_ray(
     def _objective(trial, local_trainer, checkpoint_dir=None):
         checkpoint = None
         if checkpoint_dir:
+            if not os.path.exists(checkpoint_dir):
+                os.mkdir(checkpoint_dir)
             for subdir in os.listdir(checkpoint_dir):
                 if subdir.startswith(PREFIX_CHECKPOINT_DIR):
                     checkpoint = os.path.join(checkpoint_dir, subdir)

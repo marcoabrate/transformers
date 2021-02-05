@@ -133,9 +133,9 @@ class DataTrainingArguments:
 class HPSearchArgs:
 
     hp_search: bool = field(default=False, metadata={'help': 'Wether to run hyperparameter search'})
-    hp_search_checkpoint_dir: Optional[str] = field(default=None, metadata={'help': 'Where to save Ray checkpoints for hyperparameter search.'})
+    hp_search_checkpoint_dir: Optional[str] = field(default='~/ray_checkpoints', metadata={'help': 'Where to save Ray checkpoints for hyperparameter search.'})
     hp_search_local_mode: bool = field(default=False, metadata={'help': 'If true, the code will be executed serially. This is useful for debugging hyperparameter search.'})
-    hp_search_db_host: Optional[str] = field(default=None, metadata={'help': 'The host to bind the dashboard server to for hyperparameter search.'})
+    hp_search_db_host: Optional[str] = field(default='127.0.0.1', metadata={'help': 'The host to bind the dashboard server to for hyperparameter search.'})
     hp_search_log_to_driver: bool = field(default=False, metadata={'help': 'If true, the output from all of the worker processes on all nodes will be directed to the driver during hyperparameter search.'})
     hp_search_checkpoints_num: int = field(default=0, metadata={'help': 'Number of checkpoints to keep during hyperparameter search.'})
     hp_search_name: Optional[str] = field(default=None, metadata={'help': 'Name of hyperparameter search experiment.'})
