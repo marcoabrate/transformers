@@ -16,7 +16,7 @@ import itertools
 import json
 import linecache
 import math
-import os
+import sys, os
 import pickle
 import socket
 from logging import getLogger
@@ -511,7 +511,7 @@ def extract_rouge_mid_statistics(dct):
     for k1, v1 in dct.items():
         mid = v1.mid
         for stat in ['precision', 'recall', 'fmeasure']:
-            new_dict[k1+'_'+stat] = round(getattr(mid, stat), 4)
+            new_dict[k1+'_'+stat] = 100*round(getattr(mid, stat), 4)
     return new_dict
 
 
@@ -592,13 +592,13 @@ def calculate_w2v_cosine(
     cosine_sim = lambda a, b: (np.dot(a, b) / (np.linalg.norm(a)*np.linalg.norm(b)))
     
     w2v_cosine = []
-    for tgt, pred in zip(tgt_lns, pred_lns):
-        pred_proc = simple_preprocess(pred, deacc=True)
-        tgt_proc = simple_preprocess(tgt, deacc=True)
-        corpus = [pred_proc, tgt_proc]
-        w2v = Word2Vec(corpus, min_count=1, sg=1)
-        tgt_embed = np.mean([w2v.wv[word] for word in tgt_proc], axis=0)
-        pred_embed = np.mean([w2v.wv[word] for word in pred_proc], axis=0)
+    tgt_proc = [simple_preprocess(pred, deacc=True) for pred in pred_lns]
+    pred_proc = [simple_preprocess(tgt, deacc=True) for tgt in tgt_lns]
+    corpus = tgt_proc + pred_proc
+    w2v = Word2Vec(corpus, min_count=1, sg=1)
+    for tgt, pred in zip(tgt_proc, pred_proc):
+        tgt_embed = np.mean([w2v.wv[word] for word in tgt], axis=0)
+        pred_embed = np.mean([w2v.wv[word] for word in pred], axis=0)
         w2v_cosine.append(cosine_sim(tgt_embed, pred_embed))
 
     return np.mean(w2v_cosine)*100
