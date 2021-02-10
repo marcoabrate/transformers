@@ -102,7 +102,8 @@ def build_compute_metrics_fn(task_name: str, tokenizer: PreTrainedTokenizer) -> 
 
         st_cosine_sim = calculate_sentence_trans_cosine(pred_str, label_str)
         w2v_cosine_sim = calculate_w2v_cosine(pred_str, label_str)
-        metrics.update({'sentence_distilroberta_cosine': cosine_sim})
+        metrics.update({'sentence_distilroberta_cosine': st_cosine_sim})
+        metrics.update({'w2v_cosine': w2v_cosine_sim})
 
         return metrics
 

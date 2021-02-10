@@ -132,7 +132,8 @@ class DataTrainingArguments:
 @dataclass
 class HPSearchArgs:
 
-    hp_search: bool = field(default=False, metadata={'help': 'Wether to run hyperparameter search'})
+    hp_search: bool = field(default=False, metadata={'help': 'Wether to run hyperparameter search.'})
+    hp_search_n_trials: int = field(default=1, metadata={'help': 'How many times to run grid search.'})
     hp_search_checkpoint_dir: Optional[str] = field(default='~/ray_checkpoints', metadata={'help': 'Where to save Ray checkpoints for hyperparameter search.'})
     hp_search_local_mode: bool = field(default=False, metadata={'help': 'If true, the code will be executed serially. This is useful for debugging hyperparameter search.'})
     hp_search_db_host: Optional[str] = field(default='127.0.0.1', metadata={'help': 'The host to bind the dashboard server to for hyperparameter search.'})
@@ -349,6 +350,7 @@ def main():
             compute_objective = hp_objective,
             hp_space = hp_space,
             backend = 'ray',
+            n_trials = hp_search_args.hp_search_n_trials,
             cp_dir = hp_search_args.hp_search_checkpoint_dir,
             local_mode = hp_search_args.hp_search_local_mode,
             db_host = hp_search_args.hp_search_db_host,
@@ -358,7 +360,7 @@ def main():
             local_dir = hp_search_args.hp_search_log_dir,
             # search_alg
             # scheduler
-            resources_per_trial = {'gpu': 1},
+            resources_per_trial = {'cpu': 3, 'gpu': 1},
         )
         return
 
