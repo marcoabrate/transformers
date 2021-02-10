@@ -360,7 +360,7 @@ def main():
             local_dir = hp_search_args.hp_search_log_dir,
             # search_alg
             # scheduler
-            resources_per_trial = {'cpu': 1, 'gpu': 1},
+            resources_per_trial = {'cpu': 3, 'gpu': 1},
         )
         return
 
