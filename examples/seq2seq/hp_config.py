@@ -11,6 +11,8 @@ def hp_space(trial):
     from ray import tune
 
     return {
-    'learning_rate': tune.grid_search([1e-5, 5e-5, 1e-4, 5e-4]),
-    'gradient_accumulation_steps': tune.grid_search([8, 32, 64]),
+    'learning_rate': tune.grid_search([1e-5, 1e-4, 1e-3, 1e-2]),
+    'gradient_accumulation_steps': tune.grid_search([8, 16, 32]),
+    'eval_steps': tune.sample_from(lambda spec:\
+        int(112/spec.config.gradient_accumulation_steps))
     }
