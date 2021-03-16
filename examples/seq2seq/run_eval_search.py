@@ -27,7 +27,10 @@ from utils import ROUGE_KEYS
 # To add a new task, simply list the score names that `run_eval.run_generate()` returns
 task_score_names = {
     "translation": ["bleu"],
-    "summarization": ROUGE_KEYS,
+    "summarization": ['sentence_distilroberta_cosine']+\
+        ['rougeL_fmeasure', 'rouge2_fmeasure', 'rouge1_fmeasure']+\
+        ['rougeL_precision', 'rouge2_precision', 'rouge1_precision']+\
+        ['rougeL_recall', 'rouge2_recall', 'rouge1_recall']
 }
 
 

@@ -26,7 +26,7 @@ import torch
 from tqdm import tqdm
 
 from transformers import AutoModelForSeq2SeqLM, AutoTokenizer
-from utils import calculate_bleu, calculate_rouge, chunks, parse_numeric_n_bool_cl_kwargs, use_task_specific_params
+from utils import calculate_bleu, calculate_rouge, calculate_sentence_trans_cosine, calculate_w2v_cosine, chunks, parse_numeric_n_bool_cl_kwargs, use_task_specific_params
 
 
 logger = getLogger(__name__)
@@ -154,6 +154,12 @@ def run_generate(verbose=True):
     output_lns = [x.rstrip() for x in open(args.save_path).readlines()]
     reference_lns = [x.rstrip() for x in open(args.reference_path).readlines()][: len(output_lns)]
     scores: dict = score_fn(output_lns, reference_lns)
+
+    sentence_trans = calculate_sentence_trans_cosine(output_lns, reference_lns)
+    w2v = calculate_w2v_cosine(output_lns, reference_lns)
+
+    scores.update(sentence_trans)
+    scores.update(w2v)
     scores.update(runtime_metrics)
 
     if args.dump_args:
